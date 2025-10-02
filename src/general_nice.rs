@@ -1,6 +1,8 @@
 use std::{fmt::Debug, ops::Deref, sync::Arc};
 
+use inflector::Inflector;
 use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use tryvial::try_fn;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -30,6 +32,9 @@ impl Debug for ConditionScope {
 					if c.abort { "ABORT " } else { "" },
 					if c.not { "NOT " } else { "" },
 					format!("{:?}", c.data)
+						.split_once('(')
+						.unwrap()
+						.1
 						.split_once('_')
 						.unwrap()
 						.1
@@ -85,6 +90,9 @@ impl Debug for BehaviorNode {
 				f,
 				"BEHAVIOR {}",
 				format!("{data:?}")
+					.split_once('(')
+					.unwrap()
+					.1
 					.split_once('_')
 					.unwrap()
 					.1
@@ -280,6 +288,45 @@ pub enum BehaviorTreeError {
 	MultipleEndBehaviors
 }
 
+#[derive(Debug, thiserror::Error)]
+pub enum BehaviorTreeParseError {
+	#[error("unrecognised keyword: {0}")]
+	UnrecognisedKeyword(String),
+
+	#[error("failed to deserialize behavior '{name}': {source}")]
+	BehaviorDeserializationError {
+		name: String,
+		#[source]
+		source: serde_json::Error
+	},
+
+	#[error("failed to deserialize condition '{name}': {source}")]
+	ConditionDeserializationError {
+		name: String,
+		#[source]
+		source: serde_json::Error
+	},
+
+	#[error("invalid variable string: {variable}")]
+	InvalidVariable { variable: String },
+
+	#[error("invalid var index: {index}")]
+	InvalidVarIndex {
+		index: String,
+		#[source]
+		source: std::num::ParseIntError
+	},
+
+	#[error("missing colon in argument: {argument}")]
+	MissingColon { argument: String },
+
+	#[error("unexpected end of input")]
+	UnexpectedEndOfInput,
+
+	#[error("indentation must be tabs, not spaces")]
+	InvalidIndentation
+}
+
 impl BehaviorTree {
 	#[try_fn]
 	pub fn from_raw(raw: raw::ZCompiledBehaviorTree) -> Result<Self, BehaviorTreeError> {
@@ -463,5 +510,286 @@ impl BehaviorTree {
 			},
 			root: root_scope
 		}
+	}
+
+	pub fn as_pseudocode(&self) -> String {
+		format!("{:?}", self.root)
+	}
+
+	#[try_fn]
+	pub fn from_pseudocode(input: &str) -> Result<Self, BehaviorTreeParseError> {
+		struct Line {
+			indent: usize,
+			content: String
+		}
+
+		let lines: Vec<Line> = input
+			.lines()
+			.filter(|line| !line.trim().is_empty())
+			.map(|line| {
+				let indent = line.chars().take_while(|c| *c == '\t').count();
+				if line.starts_with(' ') {
+					Err(BehaviorTreeParseError::InvalidIndentation)
+				} else {
+					Ok(Line {
+						indent,
+						content: line.trim().to_string()
+					})
+				}
+			})
+			.collect::<Result<_, _>>()?;
+
+		#[try_fn]
+		fn parse_variable(s: &str) -> Result<BehaviorTreeVariable, BehaviorTreeParseError> {
+			if s == "null" {
+				BehaviorTreeVariable::None
+			} else if let Some(rest) = s.strip_prefix("dynamic ") {
+				let var_type = match rest {
+					"Me" => DynamicVariableType::Me,
+					"Hitman" => DynamicVariableType::Hitman,
+					"InSight" => DynamicVariableType::InSight,
+					"RecentlyInSight" => DynamicVariableType::RecentlyInSight,
+					"Sounds" => DynamicVariableType::Sounds,
+
+					_ => {
+						return Err(BehaviorTreeParseError::InvalidVariable { variable: s.into() });
+					}
+				};
+				BehaviorTreeVariable::Dynamic(var_type)
+			} else if let Some(rest) = s.strip_prefix("var ") {
+				BehaviorTreeVariable::Contextual(rest.parse().map_err(|e| BehaviorTreeParseError::InvalidVarIndex {
+					index: rest.to_string(),
+					source: e
+				})?)
+			} else if let Some(rest) = s.strip_prefix("ref ") {
+				BehaviorTreeVariable::SceneReference(rest.into())
+			} else {
+				return Err(BehaviorTreeParseError::InvalidVariable { variable: s.into() });
+			}
+		}
+
+		#[try_fn]
+		fn parse_condition_line(line: &str) -> Result<Condition, BehaviorTreeParseError> {
+			let mut weak = false;
+			let mut abort = false;
+			let mut not = false;
+			let mut rest = line;
+
+			if let Some(r) = rest.strip_prefix("WEAK ") {
+				weak = true;
+				rest = r;
+			}
+
+			if let Some(r) = rest.strip_prefix("ABORT ") {
+				abort = true;
+				rest = r;
+			}
+
+			if let Some(r) = rest.strip_prefix("NOT ") {
+				not = true;
+				rest = r;
+			}
+
+			let (condition, assign_to) = if let Some((condition, var)) = rest.split_once(" -> ") {
+				(condition, parse_variable(var)?)
+			} else {
+				(rest.trim(), BehaviorTreeVariable::None)
+			};
+
+			let (name, args) = if let Some((name, args)) = condition.split_once(" {") {
+				(name, Some(&args[0..args.len() - 1]))
+			} else {
+				(condition, None)
+			};
+
+			let data: ConditionData = serde_json::from_value(json!({
+				"type": name,
+				"data": if let Some(args) = args { parse_args_to_json(args)? } else { Value::Null }
+			}))
+			.map_err(|e| BehaviorTreeParseError::ConditionDeserializationError {
+				name: name.into(),
+				source: e
+			})?;
+
+			Condition {
+				weak,
+				abort,
+				not,
+				assign_to,
+				data
+			}
+		}
+
+		#[try_fn]
+		fn parse_args_to_json(args: &str) -> Result<Value, BehaviorTreeParseError> {
+			let mut obj = serde_json::Map::new();
+
+			let pairs = split_by_comma(args);
+
+			for pair in pairs {
+				if pair.trim().is_empty() {
+					continue;
+				}
+
+				let (key, value) = pair
+					.split_once(": ")
+					.ok_or_else(|| BehaviorTreeParseError::MissingColon {
+						argument: pair.to_string()
+					})?;
+
+				obj.insert(key.to_camel_case(), parse_value_to_json(value)?);
+			}
+
+			obj.into()
+		}
+
+		fn parse_value_to_json(value: &str) -> Result<serde_json::Value, BehaviorTreeParseError> {
+			if value == "null"
+				|| value.starts_with("dynamic ")
+				|| value.starts_with("var ")
+				|| value.starts_with("ref ")
+			{
+				let var = parse_variable(value)?;
+				Ok(serde_json::to_value(var).unwrap())
+			} else if value == "true" {
+				Ok(serde_json::Value::Bool(true))
+			} else if value == "false" {
+				Ok(serde_json::Value::Bool(false))
+			} else if let Ok(i) = value.parse::<i64>() {
+				Ok(serde_json::Value::Number(i.into()))
+			} else if let Ok(f) = value.parse::<f64>() {
+				Ok(serde_json::Value::Number(serde_json::Number::from_f64(f).unwrap()))
+			} else if value.starts_with('"') && value.ends_with('"') {
+				Ok(serde_json::Value::String(value[1..value.len() - 1].to_string()))
+			} else {
+				// Assume it's an enum variant
+				Ok(serde_json::Value::String(value.to_string()))
+			}
+		}
+
+		fn split_by_comma(s: &str) -> Vec<String> {
+			let mut result = Vec::new();
+			let mut current = String::new();
+			let mut brace_depth = 0;
+			let mut in_quotes = false;
+
+			for ch in s.chars() {
+				match ch {
+					'"' => {
+						in_quotes = !in_quotes;
+						current.push(ch);
+					}
+					'{' if !in_quotes => {
+						brace_depth += 1;
+						current.push(ch);
+					}
+					'}' if !in_quotes => {
+						brace_depth -= 1;
+						current.push(ch);
+					}
+					',' if !in_quotes && brace_depth == 0 => {
+						result.push(current.trim().to_string());
+						current.clear();
+					}
+					_ => {
+						current.push(ch);
+					}
+				}
+			}
+
+			if !current.trim().is_empty() {
+				result.push(current.trim().to_string());
+			}
+
+			result
+		}
+
+		#[try_fn]
+		fn parse_scope(lines: &[Line], idx: &mut usize) -> Result<ConditionScope, BehaviorTreeParseError> {
+			if *idx >= lines.len() {
+				return Err(BehaviorTreeParseError::UnexpectedEndOfInput);
+			}
+
+			let line = &lines[*idx];
+
+			let (conditions, is_end) = if let Some(rest) = line.content.strip_prefix("SCOPE END") {
+				(rest.trim(), true)
+			} else if let Some(rest) = line.content.strip_prefix("SCOPE") {
+				(rest.trim(), false)
+			} else {
+				unreachable!()
+			};
+
+			let conditions = split_by_comma(conditions)
+				.iter()
+				.map(|s| parse_condition_line(s.trim()))
+				.collect::<Result<Vec<_>, _>>()?;
+
+			*idx += 1;
+
+			let mut behaviors = vec![];
+			while *idx < lines.len() && lines[*idx].indent > line.indent {
+				behaviors.push(parse_behavior_node(lines, idx)?);
+			}
+
+			ConditionScope {
+				is_end,
+				conditions,
+				behaviors
+			}
+		}
+
+		#[try_fn]
+		fn parse_behavior_node(lines: &[Line], idx: &mut usize) -> Result<BehaviorNode, BehaviorTreeParseError> {
+			if *idx >= lines.len() {
+				return Err(BehaviorTreeParseError::UnexpectedEndOfInput);
+			}
+
+			let line = &lines[*idx];
+
+			if line.content.starts_with("SCOPE") {
+				BehaviorNode::Scope(parse_scope(lines, idx)?)
+			} else if line.content.starts_with("MATCH ") {
+				*idx += 1;
+				BehaviorNode::Match(line.content.strip_prefix("MATCH ").unwrap().into())
+			} else if line.content.starts_with("SEQUENCE") {
+				let current_indent = line.indent;
+				*idx += 1;
+
+				let mut children = vec![];
+				while *idx < lines.len() && lines[*idx].indent > current_indent {
+					children.push(parse_behavior_node(lines, idx)?);
+				}
+
+				BehaviorNode::Sequence(children)
+			} else if line.content.starts_with("BEHAVIOR ") {
+				let behavior = line.content.strip_prefix("BEHAVIOR ").unwrap().trim();
+
+				let (name, args) = if let Some((name, args)) = behavior.split_once(" {") {
+					(name, Some(&args[0..args.len() - 1]))
+				} else {
+					(behavior, None)
+				};
+
+				let behavior: Behavior = serde_json::from_value(json!({
+					"type": name,
+					"data": if let Some(args) = args { parse_args_to_json(args)? } else { Value::Null }
+				}))
+				.map_err(|e| BehaviorTreeParseError::BehaviorDeserializationError {
+					name: name.into(),
+					source: e
+				})?;
+
+				*idx += 1;
+				BehaviorNode::Behavior(behavior)
+			} else {
+				return Err(BehaviorTreeParseError::UnrecognisedKeyword(line.content.to_owned()));
+			}
+		}
+
+		let mut idx = 0;
+		let root = parse_scope(&lines, &mut idx)?;
+
+		BehaviorTree { root }
 	}
 }

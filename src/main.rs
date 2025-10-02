@@ -6,7 +6,7 @@ use hitman_bin1::{de::deserialize, ser::serialize};
 fn main() {
 	match std::env::args().nth(1).as_deref() {
 		Some("h3") => match std::env::args().nth(2).as_deref() {
-			Some("convert") => {
+			Some("convert-json") => {
 				let input_path = std::env::args().nth(3).expect("3rd argument must be input path");
 				let output_path = std::env::args().nth(4).expect("4th argument must be output path");
 
@@ -38,7 +38,7 @@ fn main() {
 				fs::write(output_path, format!("{:?}", tree.root)).unwrap();
 			}
 
-			Some("generate") => {
+			Some("generate-json") => {
 				let input_path = std::env::args().nth(3).expect("3rd argument must be input path");
 				let output_path = std::env::args().nth(4).expect("4th argument must be output path");
 
@@ -58,7 +58,27 @@ fn main() {
 				.unwrap();
 			}
 
-			_ => panic!("2nd argument must be convert, convert-txt or generate")
+			Some("generate-txt") => {
+				let input_path = std::env::args().nth(3).expect("3rd argument must be input path");
+				let output_path = std::env::args().nth(4).expect("4th argument must be output path");
+
+				let tree = h3::BehaviorTree::from_pseudocode(&fs::read_to_string(input_path).unwrap()).unwrap();
+
+				let raw = tree.into_raw().unwrap();
+
+				fs::write(
+					output_path,
+					std::thread::Builder::new()
+						.stack_size(64 * 1024 * 1024)
+						.spawn(move || serialize(&raw).unwrap())
+						.unwrap()
+						.join()
+						.unwrap()
+				)
+				.unwrap();
+			}
+
+			_ => panic!("2nd argument must be convert-json, convert-txt, generate-json or generate-txt")
 		},
 
 		_ => panic!("1st argument must be h3")
