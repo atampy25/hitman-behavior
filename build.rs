@@ -132,7 +132,7 @@ fn parse_classes(classes: &str) -> Vec<(String, Vec<Member>)> {
 										process_type_name(regex_captures!(r"TPair<(.*), *(.*)>", x).unwrap().2)
 									),
 
-									x => x.into()
+									x => x.replace('.', "_")
 								}
 							}
 
@@ -220,7 +220,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 					for ty in tys {
 						if let Some(pos) = classes.iter().position(|x| x.0 == *ty) {
 							class_queue.push_back(classes.remove(pos));
-						} else if ty.starts_with('E') {
+						} else if ty.split('_').any(|x| x.starts_with('E')) {
 							scope.import(&format!("hitman_bin1::game::{game}"), ty);
 							scope_nice.import(&format!("hitman_bin1::game::{game}"), ty);
 						}
@@ -727,17 +727,19 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 pub fn main() -> Result<()> {
 	let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
-	// let mut h1 = Scope::new();
+	let mut h1 = Scope::new();
+	let mut h1_nice = Scope::new();
 
-	// generate(&mut h1, &fs::read_to_string("h1.txt")?);
+	generate(
+		&mut h1,
+		&mut h1_nice,
+		"h1",
+		&fs::read_to_string("h1-classes.txt")?,
+		&fs::read_to_string("h1-enums.txt")?
+	);
 
-	// fs::write(out_dir.join("h1.rs"), h1.to_string())?;
-
-	// let mut h2 = Scope::new();
-
-	// generate(&mut h2, &fs::read_to_string("h2.txt")?);
-
-	// fs::write(out_dir.join("h2.rs"), h2.to_string())?;
+	fs::write(out_dir.join("h1.rs"), h1.to_string())?;
+	fs::write(out_dir.join("h1_nice.rs"), h1_nice.to_string())?;
 
 	let mut h3 = Scope::new();
 	let mut h3_nice = Scope::new();
@@ -746,7 +748,7 @@ pub fn main() -> Result<()> {
 		&mut h3,
 		&mut h3_nice,
 		"h3",
-		&fs::read_to_string("h3.txt")?,
+		&fs::read_to_string("h3-classes.txt")?,
 		&fs::read_to_string("h3-enums.txt")?
 	);
 
@@ -754,11 +756,11 @@ pub fn main() -> Result<()> {
 	fs::write(out_dir.join("h3_nice.rs"), h3_nice.to_string())?;
 
 	println!("cargo::rerun-if-changed=build.rs");
-	// println!("cargo::rerun-if-changed=h1.txt");
-	// println!("cargo::rerun-if-changed=h1-enums.txt");
-	// println!("cargo::rerun-if-changed=h2.txt");
+	println!("cargo::rerun-if-changed=h1-classes.txt");
+	println!("cargo::rerun-if-changed=h1-enums.txt");
+	// println!("cargo::rerun-if-changed=h2-classes.txt");
 	// println!("cargo::rerun-if-changed=h2-enums.txt");
-	println!("cargo::rerun-if-changed=h3.txt");
+	println!("cargo::rerun-if-changed=h3-classes.txt");
 	println!("cargo::rerun-if-changed=h3-enums.txt");
 
 	Ok(())
