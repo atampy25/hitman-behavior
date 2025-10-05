@@ -12,12 +12,16 @@ fn main() {
 
 				let raw = std::thread::Builder::new()
 					.stack_size(64 * 1024 * 1024)
-					.spawn(|| deserialize(&fs::read(input_path).unwrap()).unwrap())
+					.spawn(|| {
+						deserialize(&fs::read(input_path).unwrap())
+							.map_err(|e| format!("{e}"))
+							.unwrap()
+					})
 					.unwrap()
 					.join()
 					.unwrap();
 
-				let tree = h1::BehaviorTree::from_raw(raw).unwrap();
+				let tree = h1::BehaviorTree::from_raw(raw).map_err(|e| format!("{e}")).unwrap();
 
 				fs::write(output_path, serde_json::to_vec_pretty(&tree).unwrap()).unwrap();
 			}
@@ -28,12 +32,16 @@ fn main() {
 
 				let raw = std::thread::Builder::new()
 					.stack_size(64 * 1024 * 1024)
-					.spawn(|| deserialize(&fs::read(input_path).unwrap()).unwrap())
+					.spawn(|| {
+						deserialize(&fs::read(input_path).unwrap())
+							.map_err(|e| format!("{e}"))
+							.unwrap()
+					})
 					.unwrap()
 					.join()
 					.unwrap();
 
-				let tree = h1::BehaviorTree::from_raw(raw).unwrap();
+				let tree = h1::BehaviorTree::from_raw(raw).map_err(|e| format!("{e}")).unwrap();
 
 				fs::write(output_path, format!("{:?}", tree.root)).unwrap();
 			}
@@ -44,13 +52,13 @@ fn main() {
 
 				let tree: h1::BehaviorTree = serde_json::from_slice(&fs::read(input_path).unwrap()).unwrap();
 
-				let raw = tree.into_raw().unwrap();
+				let raw = tree.into_raw().map_err(|e| format!("{e}")).unwrap();
 
 				fs::write(
 					output_path,
 					std::thread::Builder::new()
 						.stack_size(64 * 1024 * 1024)
-						.spawn(move || serialize(&raw).unwrap())
+						.spawn(move || serialize(&raw).map_err(|e| format!("{e}")).unwrap())
 						.unwrap()
 						.join()
 						.unwrap()
@@ -64,13 +72,13 @@ fn main() {
 
 				let tree = h1::BehaviorTree::from_pseudocode(&fs::read_to_string(input_path).unwrap()).unwrap();
 
-				let raw = tree.into_raw().unwrap();
+				let raw = tree.into_raw().map_err(|e| format!("{e}")).unwrap();
 
 				fs::write(
 					output_path,
 					std::thread::Builder::new()
 						.stack_size(64 * 1024 * 1024)
-						.spawn(move || serialize(&raw).unwrap())
+						.spawn(move || serialize(&raw).map_err(|e| format!("{e}")).unwrap())
 						.unwrap()
 						.join()
 						.unwrap()
@@ -88,12 +96,16 @@ fn main() {
 
 				let raw = std::thread::Builder::new()
 					.stack_size(64 * 1024 * 1024)
-					.spawn(|| deserialize(&fs::read(input_path).unwrap()).unwrap())
+					.spawn(|| {
+						deserialize(&fs::read(input_path).unwrap())
+							.map_err(|e| format!("{e}"))
+							.unwrap()
+					})
 					.unwrap()
 					.join()
 					.unwrap();
 
-				let tree = h3::BehaviorTree::from_raw(raw).unwrap();
+				let tree = h3::BehaviorTree::from_raw(raw).map_err(|e| format!("{e}")).unwrap();
 
 				fs::write(output_path, serde_json::to_vec_pretty(&tree).unwrap()).unwrap();
 			}
@@ -104,12 +116,16 @@ fn main() {
 
 				let raw = std::thread::Builder::new()
 					.stack_size(64 * 1024 * 1024)
-					.spawn(|| deserialize(&fs::read(input_path).unwrap()).unwrap())
+					.spawn(|| {
+						deserialize(&fs::read(input_path).unwrap())
+							.map_err(|e| format!("{e}"))
+							.unwrap()
+					})
 					.unwrap()
 					.join()
 					.unwrap();
 
-				let tree = h3::BehaviorTree::from_raw(raw).unwrap();
+				let tree = h3::BehaviorTree::from_raw(raw).map_err(|e| format!("{e}")).unwrap();
 
 				fs::write(output_path, format!("{:?}", tree.root)).unwrap();
 			}
@@ -120,13 +136,13 @@ fn main() {
 
 				let tree: h3::BehaviorTree = serde_json::from_slice(&fs::read(input_path).unwrap()).unwrap();
 
-				let raw = tree.into_raw().unwrap();
+				let raw = tree.into_raw().map_err(|e| format!("{e}")).unwrap();
 
 				fs::write(
 					output_path,
 					std::thread::Builder::new()
 						.stack_size(64 * 1024 * 1024)
-						.spawn(move || serialize(&raw).unwrap())
+						.spawn(move || serialize(&raw).map_err(|e| format!("{e}")).unwrap())
 						.unwrap()
 						.join()
 						.unwrap()
@@ -140,13 +156,13 @@ fn main() {
 
 				let tree = h3::BehaviorTree::from_pseudocode(&fs::read_to_string(input_path).unwrap()).unwrap();
 
-				let raw = tree.into_raw().unwrap();
+				let raw = tree.into_raw().map_err(|e| format!("{e}")).unwrap();
 
 				fs::write(
 					output_path,
 					std::thread::Builder::new()
 						.stack_size(64 * 1024 * 1024)
-						.spawn(move || serialize(&raw).unwrap())
+						.spawn(move || serialize(&raw).map_err(|e| format!("{e}")).unwrap())
 						.unwrap()
 						.join()
 						.unwrap()

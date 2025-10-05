@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 ecow = "0.2.6"
-hitman-bin1 = { git = "https://github.com/atampy25/hitman-bin1" }
+hitman-bin1 = { git = "https://github.com/atampy25/hitman-bin1", features = ["h1", "h3"] }
 serde = "1.0.228"
 serde_json = "1.0.145"
 thiserror = "2.0.17"

@@ -1,4 +1,4 @@
-use std::{fmt::Debug, ops::Deref, sync::Arc};
+use std::{convert::TryFrom, fmt::Debug, ops::Deref, sync::Arc};
 
 use inflector::Inflector;
 use serde::{Deserialize, Serialize};
@@ -6,11 +6,13 @@ use serde_json::{Value, json};
 use tryvial::try_fn;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BehaviorTree {
 	pub root: ConditionScope
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ConditionScope {
 	#[serde(default, skip_serializing_if = "std::ops::Not::not")]
 	pub is_end: bool,
@@ -28,9 +30,9 @@ impl Debug for ConditionScope {
 			.map(|c| {
 				format!(
 					" {}{}{}{}{}",
-					if c.weak { "WEAK " } else { "" },
-					if c.abort { "ABORT " } else { "" },
-					if c.not { "NOT " } else { "" },
+					if c.modifiers.weak { "WEAK " } else { "" },
+					if c.modifiers.abort { "ABORT " } else { "" },
+					if c.modifiers.not { "NOT " } else { "" },
 					format!("{:?}", c.data)
 						.split_once('(')
 						.unwrap()
@@ -111,6 +113,19 @@ impl Debug for BehaviorNode {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Condition {
+	#[serde(flatten, default, skip_serializing_if = "is_default")]
+	pub modifiers: ConditionModifiers,
+
+	#[serde(default, skip_serializing_if = "is_default")]
+	pub assign_to: BehaviorTreeVariable,
+
+	#[serde(flatten)]
+	pub data: ConditionData
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConditionModifiers {
 	#[serde(default, skip_serializing_if = "std::ops::Not::not")]
 	pub not: bool,
 
@@ -118,13 +133,30 @@ pub struct Condition {
 	pub abort: bool,
 
 	#[serde(default, skip_serializing_if = "std::ops::Not::not")]
-	pub weak: bool,
+	pub weak: bool
+}
 
-	#[serde(default, skip_serializing_if = "is_default")]
-	pub assign_to: BehaviorTreeVariable,
+impl TryFrom<u32> for ConditionModifiers {
+	type Error = BehaviorTreeError;
 
-	#[serde(flatten)]
-	pub data: ConditionData
+	#[try_fn]
+	fn try_from(value: u32) -> Result<Self, Self::Error> {
+		if value & !0b111 != 0 {
+			return Err(BehaviorTreeError::UnrecognisedModifiers(value));
+		}
+
+		Self {
+			not: value & 1 == 1,
+			abort: value & 2 == 2,
+			weak: value & 4 == 4
+		}
+	}
+}
+
+impl From<ConditionModifiers> for u32 {
+	fn from(value: ConditionModifiers) -> Self {
+		(if value.not { 1 } else { 0 }) | (if value.abort { 2 } else { 0 }) | (if value.weak { 4 } else { 0 })
+	}
 }
 
 fn is_default<T: Default + PartialEq>(value: &T) -> bool {
@@ -135,9 +167,7 @@ impl Condition {
 	#[try_fn]
 	pub fn from_raw(scene_reference_names: &[EcoString], value: raw::SCondition) -> Result<Self, BehaviorTreeError> {
 		Self {
-			not: value.condition_modifiers & 1 == 1,
-			abort: value.condition_modifiers & 2 == 2,
-			weak: value.condition_modifiers & 4 == 4,
+			modifiers: ConditionModifiers::try_from(value.condition_modifiers)?,
 			assign_to: BehaviorTreeVariable::from_raw(scene_reference_names, value.assign_to)?,
 			data: ConditionData::from_raw(scene_reference_names, value.data.to_owned())?
 		}
@@ -145,9 +175,7 @@ impl Condition {
 
 	pub fn into_raw(self, scene_reference_names: &mut Vec<EcoString>) -> raw::SCondition {
 		raw::SCondition {
-			condition_modifiers: (if self.not { 1 } else { 0 })
-				| (if self.abort { 2 } else { 0 })
-				| (if self.weak { 4 } else { 0 }),
+			condition_modifiers: self.modifiers.into(),
 			assign_to: self.assign_to.into_raw(scene_reference_names),
 			data: self.data.into_raw(scene_reference_names)
 		}
@@ -281,11 +309,17 @@ pub enum BehaviorTreeError {
 	#[error("invalid type {0:?} for simple behavior")]
 	InvalidBehaviorType(ECompiledBehaviorType),
 
+	#[error("unrecognised condition modifiers {0}")]
+	UnrecognisedModifiers(u32),
+
 	#[error("no end behavior set")]
 	NoEndBehavior,
 
 	#[error("multiple end behaviors set")]
-	MultipleEndBehaviors
+	MultipleEndBehaviors,
+
+	#[error("behaviors and sequences can only be the last child of a scope")]
+	InvalidNesting
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -470,6 +504,12 @@ impl BehaviorTree {
 			let mut processed: Vec<Arc<raw::SBehavior>> = vec![];
 
 			for child in children.into_iter().rev() {
+				if !processed.is_empty()
+					&& let BehaviorNode::Behavior(_) | BehaviorNode::Sequence(_) = child
+				{
+					return Err(BehaviorTreeError::InvalidNesting);
+				}
+
 				processed.insert(
 					0,
 					process_behavior(
@@ -526,6 +566,7 @@ impl BehaviorTree {
 		let lines: Vec<Line> = input
 			.lines()
 			.filter(|line| !line.trim().is_empty())
+			.filter(|line| !line.trim().starts_with("//"))
 			.map(|line| {
 				let indent = line.chars().take_while(|c| *c == '\t').count();
 				if line.starts_with(' ') {
@@ -612,9 +653,7 @@ impl BehaviorTree {
 			})?;
 
 			Condition {
-				weak,
-				abort,
-				not,
+				modifiers: ConditionModifiers { weak, abort, not },
 				assign_to,
 				data
 			}
