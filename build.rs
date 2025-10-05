@@ -741,6 +741,20 @@ pub fn main() -> Result<()> {
 	fs::write(out_dir.join("h1.rs"), h1.to_string())?;
 	fs::write(out_dir.join("h1_nice.rs"), h1_nice.to_string())?;
 
+	let mut h2 = Scope::new();
+	let mut h2_nice = Scope::new();
+
+	generate(
+		&mut h2,
+		&mut h2_nice,
+		"h2",
+		&fs::read_to_string("h2-classes.txt")?,
+		&fs::read_to_string("h2-enums.txt")?
+	);
+
+	fs::write(out_dir.join("h2.rs"), h2.to_string())?;
+	fs::write(out_dir.join("h2_nice.rs"), h2_nice.to_string())?;
+
 	let mut h3 = Scope::new();
 	let mut h3_nice = Scope::new();
 
@@ -758,8 +772,8 @@ pub fn main() -> Result<()> {
 	println!("cargo::rerun-if-changed=build.rs");
 	println!("cargo::rerun-if-changed=h1-classes.txt");
 	println!("cargo::rerun-if-changed=h1-enums.txt");
-	// println!("cargo::rerun-if-changed=h2-classes.txt");
-	// println!("cargo::rerun-if-changed=h2-enums.txt");
+	println!("cargo::rerun-if-changed=h2-classes.txt");
+	println!("cargo::rerun-if-changed=h2-enums.txt");
 	println!("cargo::rerun-if-changed=h3-classes.txt");
 	println!("cargo::rerun-if-changed=h3-enums.txt");
 
