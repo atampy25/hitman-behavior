@@ -1,7 +1,7 @@
 use std::fs;
 
 use hitman_behavior::{h1, h2, h3};
-use hitman_bin1::{de::deserialize, ser::serialize};
+use hitman_bin1::{deserialize, serialize};
 
 fn main() {
 	match std::env::args().nth(1).as_deref() {
@@ -88,7 +88,7 @@ fn main() {
 
 			_ => panic!("2nd argument must be convert-json, convert-txt, generate-json or generate-txt")
 		},
-		
+
 		Some("h2") => match std::env::args().nth(2).as_deref() {
 			Some("convert-json") => {
 				let input_path = std::env::args().nth(3).expect("3rd argument must be input path");
