@@ -221,8 +221,8 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 						if let Some(pos) = classes.iter().position(|x| x.0 == *ty) {
 							class_queue.push_back(classes.remove(pos));
 						} else if ty.split('_').any(|x| x.starts_with('E')) {
-							scope.import(&format!("hitman_bin1::game::{game}"), ty);
-							scope_nice.import(&format!("hitman_bin1::game::{game}"), ty);
+							scope.import(format!("hitman_bin1::game::{game}"), ty);
+							scope_nice.import(format!("hitman_bin1::game::{game}"), ty);
 						}
 					}
 				}
@@ -244,6 +244,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			.derive("Bin1Deserialize")
 			.derive("serde::Serialize")
 			.derive("serde::Deserialize")
+			.r#macro("#[bin1(crate = hitman_bin1)]")
 			.vis("pub");
 
 		let cls_nice = scope_nice
@@ -340,7 +341,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			.arg("scene_reference_names", "&mut Vec<EcoString>")
 			.ret(format!("raw::{name}"))
 			.push_block({
-				let mut block = Block::new(&format!("raw::{name}"));
+				let mut block = Block::new(format!("raw::{name}"));
 				for member in &members {
 					if let Member::Field(_, field, ty) = member {
 						let line = if ty == "ZBehaviorTreeVariable" {
@@ -421,11 +422,11 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 		.push_block({
 			let mut block = Block::new("match self");
 			for ty in ["ConditionScope", "Match", "Sequence"] {
-				block.line(format!("Self::{ty}(_) => ECompiledBehaviorType::BT_{ty},"));
+				block.line(format!("Self::{ty}(_) => ECompiledBehaviorType::{ty},"));
 			}
 			for ty in &behaviors {
 				let ty = ty.split_once('_').unwrap().1;
-				block.line(format!("Self::{ty}(_) => ECompiledBehaviorType::BT_{ty},"));
+				block.line(format!("Self::{ty}(_) => ECompiledBehaviorType::{ty},"));
 			}
 			block
 		});
@@ -487,20 +488,20 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			for ty in ["SConditionScope", "SBehaviorMatch", "SBehaviorSequence"] {
 				let variant = ty.trim_start_matches('S').trim_start_matches("Behavior");
 				block.line(format!(
-					"ECompiledBehaviorType::BT_{variant} => Ok(Self::{variant}({ty}::read(de)?)),"
+					"ECompiledBehaviorType::{variant} => Ok(Self::{variant}({ty}::read(de)?)),"
 				));
 			}
 			for ty in &behaviors {
 				let ty = ty.split_once('_').unwrap().1;
 				block.line(format!(
-					"ECompiledBehaviorType::BT_{ty} => Ok(Self::{ty}(SBehavior_{ty}::read(de)?)),"
+					"ECompiledBehaviorType::{ty} => Ok(Self::{ty}(SBehavior_{ty}::read(de)?)),"
 				));
 			}
 			block.line("_ => Err(DeserializeError::InvalidEnumValue(ty as i64))");
 			block
 		});
 
-	scope_nice.import(&format!("hitman_bin1::game::{game}"), "ECompiledBehaviorType");
+	scope_nice.import(format!("hitman_bin1::game::{game}"), "ECompiledBehaviorType");
 
 	let behavior_nice = scope_nice
 		.new_enum("Behavior")
@@ -528,7 +529,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			let mut block = Block::new("match self");
 			for ty in &behaviors {
 				let ty = ty.split_once('_').unwrap().1;
-				block.line(format!("Self::{ty}(_) => ECompiledBehaviorType::BT_{ty},"));
+				block.line(format!("Self::{ty}(_) => ECompiledBehaviorType::{ty},"));
 			}
 			block
 		});
@@ -599,7 +600,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			let mut block = Block::new("match self");
 			for ty in &conditions {
 				let ty = ty.split_once('_').unwrap().1;
-				block.line(format!("Self::{ty}(_) => ECompiledConditionType::CT_{ty},"));
+				block.line(format!("Self::{ty}(_) => ECompiledConditionType::{ty},"));
 			}
 			block
 		});
@@ -645,14 +646,14 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			for ty in &conditions {
 				let ty = ty.split_once('_').unwrap().1;
 				block.line(format!(
-					"ECompiledConditionType::CT_{ty} => Ok(Self::{ty}(SCondition_{ty}::read(de)?)),"
+					"ECompiledConditionType::{ty} => Ok(Self::{ty}(SCondition_{ty}::read(de)?)),"
 				));
 			}
 			block.line("_ => Err(DeserializeError::InvalidEnumValue(ty as i64))");
 			block
 		});
 
-	scope_nice.import(&format!("hitman_bin1::game::{game}"), "ECompiledConditionType");
+	scope_nice.import(format!("hitman_bin1::game::{game}"), "ECompiledConditionType");
 
 	let condition_data_nice = scope_nice
 		.new_enum("ConditionData")
@@ -680,7 +681,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			let mut block = Block::new("match self");
 			for ty in &conditions {
 				let ty = ty.split_once('_').unwrap().1;
-				block.line(format!("Self::{ty}(_) => ECompiledConditionType::CT_{ty},"));
+				block.line(format!("Self::{ty}(_) => ECompiledConditionType::{ty},"));
 			}
 			block
 		});

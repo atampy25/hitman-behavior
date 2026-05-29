@@ -9,6 +9,7 @@ hitman-bin1 = { git = "https://github.com/atampy25/hitman-bin1", features = [
     "h1",
     "h2",
     "h3",
+    "enums",
 ] }
 serde = "1.0.228"
 serde_json = "1.0.145"
@@ -18,7 +19,7 @@ Inflector = "0.11.4"
 
 [build-dependencies]
 anyhow = "1.0.100"
-codegen = "0.2.0"
+codegen = "0.3.0"
 Inflector = "0.11.4"
 lazy-regex = "3.4.1"
 

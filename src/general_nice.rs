@@ -210,30 +210,30 @@ impl BehaviorTreeVariable {
 		value: raw::ZBehaviorTreeVariable
 	) -> Result<Self, BehaviorTreeError> {
 		match value.r#type {
-			EBehaviorTreeVariableType::BTVT_SceneReference => BehaviorTreeVariable::SceneReference(
+			EBehaviorTreeVariableType::SceneReference => BehaviorTreeVariable::SceneReference(
 				scene_reference_names
 					.get(value.index as usize)
 					.ok_or(BehaviorTreeError::InvalidSceneReference(value.index))?
 					.to_owned()
 			),
 
-			EBehaviorTreeVariableType::BTVT_Contextual => BehaviorTreeVariable::Contextual(value.index),
+			EBehaviorTreeVariableType::Contextual => BehaviorTreeVariable::Contextual(value.index),
 
-			EBehaviorTreeVariableType::BTVT_Dynamic => BehaviorTreeVariable::Dynamic(match value.index {
-				x if x as i32 == i32::from(EDynamicVariableType::DV_Me) => DynamicVariableType::Me,
-				x if x as i32 == i32::from(EDynamicVariableType::DV_Hitman) => DynamicVariableType::Hitman,
-				x if x as i32 == i32::from(EDynamicVariableType::DV_InSight) => DynamicVariableType::InSight,
-				x if x as i32 == i32::from(EDynamicVariableType::DV_RecentlyInSight) => {
+			EBehaviorTreeVariableType::Dynamic => BehaviorTreeVariable::Dynamic(match value.index {
+				x if x as i32 == i32::from(EDynamicVariableType::Me) => DynamicVariableType::Me,
+				x if x as i32 == i32::from(EDynamicVariableType::Hitman) => DynamicVariableType::Hitman,
+				x if x as i32 == i32::from(EDynamicVariableType::InSight) => DynamicVariableType::InSight,
+				x if x as i32 == i32::from(EDynamicVariableType::RecentlyInSight) => {
 					DynamicVariableType::RecentlyInSight
 				}
-				x if x as i32 == i32::from(EDynamicVariableType::DV_Sounds) => DynamicVariableType::Sounds,
+				x if x as i32 == i32::from(EDynamicVariableType::Sounds) => DynamicVariableType::Sounds,
 
 				_ => {
 					return Err(BehaviorTreeError::UnknownDynamicVariable(value.index));
 				}
 			}),
 
-			EBehaviorTreeVariableType::BTVT_Invalid if value.index == 0 => BehaviorTreeVariable::None,
+			EBehaviorTreeVariableType::Invalid if value.index == 0 => BehaviorTreeVariable::None,
 
 			_ => return Err(BehaviorTreeError::UnknownInvalidVariable)
 		}
@@ -242,7 +242,7 @@ impl BehaviorTreeVariable {
 	pub fn into_raw(self, scene_reference_names: &mut Vec<EcoString>) -> raw::ZBehaviorTreeVariable {
 		match self {
 			BehaviorTreeVariable::None => raw::ZBehaviorTreeVariable {
-				r#type: EBehaviorTreeVariableType::BTVT_Invalid,
+				r#type: EBehaviorTreeVariableType::Invalid,
 				index: 0
 			},
 
@@ -258,27 +258,27 @@ impl BehaviorTreeVariable {
 				};
 
 				raw::ZBehaviorTreeVariable {
-					r#type: EBehaviorTreeVariableType::BTVT_SceneReference,
+					r#type: EBehaviorTreeVariableType::SceneReference,
 					index
 				}
 			}
 
 			BehaviorTreeVariable::Contextual(index) => raw::ZBehaviorTreeVariable {
-				r#type: EBehaviorTreeVariableType::BTVT_Contextual,
+				r#type: EBehaviorTreeVariableType::Contextual,
 				index
 			},
 
 			BehaviorTreeVariable::Dynamic(var_type) => {
 				let index = match var_type {
-					DynamicVariableType::Me => i32::from(EDynamicVariableType::DV_Me) as u32,
-					DynamicVariableType::Hitman => i32::from(EDynamicVariableType::DV_Hitman) as u32,
-					DynamicVariableType::InSight => i32::from(EDynamicVariableType::DV_InSight) as u32,
-					DynamicVariableType::RecentlyInSight => i32::from(EDynamicVariableType::DV_RecentlyInSight) as u32,
-					DynamicVariableType::Sounds => i32::from(EDynamicVariableType::DV_Sounds) as u32
+					DynamicVariableType::Me => i32::from(EDynamicVariableType::Me) as u32,
+					DynamicVariableType::Hitman => i32::from(EDynamicVariableType::Hitman) as u32,
+					DynamicVariableType::InSight => i32::from(EDynamicVariableType::InSight) as u32,
+					DynamicVariableType::RecentlyInSight => i32::from(EDynamicVariableType::RecentlyInSight) as u32,
+					DynamicVariableType::Sounds => i32::from(EDynamicVariableType::Sounds) as u32
 				};
 
 				raw::ZBehaviorTreeVariable {
-					r#type: EBehaviorTreeVariableType::BTVT_Dynamic,
+					r#type: EBehaviorTreeVariableType::Dynamic,
 					index
 				}
 			}

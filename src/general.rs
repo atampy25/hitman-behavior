@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tryvial::try_fn;
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
+#[bin1(crate = hitman_bin1)]
 pub struct ZBehaviorTreeVariable {
 	#[serde(rename = "m_eType")]
 	pub r#type: EBehaviorTreeVariableType,
@@ -14,12 +15,14 @@ pub struct ZBehaviorTreeVariable {
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
+#[bin1(crate = hitman_bin1)]
 pub struct SBehaviorBase {
 	#[serde(rename = "eBehaviorType")]
 	pub behavior_type: ECompiledBehaviorType
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
+#[bin1(crate = hitman_bin1)]
 pub struct SConditionBase {
 	#[serde(rename = "eConditionType")]
 	pub condition_type: ECompiledConditionType,
@@ -140,6 +143,7 @@ fn deserialize_vec_arc_condition<'de, D: serde::Deserializer<'de>>(
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
+#[bin1(crate = hitman_bin1)]
 pub struct SConditionScope {
 	#[serde(
 		serialize_with = "serialize_option_arc_behavior",
@@ -164,6 +168,7 @@ pub struct SConditionScope {
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
+#[bin1(crate = hitman_bin1)]
 pub struct SBehaviorMatch {
 	#[serde(
 		serialize_with = "serialize_option_arc_behavior",
@@ -177,6 +182,7 @@ pub struct SBehaviorMatch {
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
+#[bin1(crate = hitman_bin1)]
 pub struct SBehaviorSequence {
 	#[bin1(as = "TArrayRef::<Arc<SBehavior>>")]
 	#[serde(
@@ -212,7 +218,7 @@ impl Bin1Serialize for ZCompiledBehaviorTree {
 	}
 
 	fn write(&self, ser: &mut Bin1Serializer) -> Result<(), SerializeError> {
-		ECompiledBehaviorType::BT_ConditionScope.write(ser)?;
+		ECompiledBehaviorType::ConditionScope.write(ser)?;
 		ser.align_to(SConditionScope::ALIGNMENT);
 		self.root.write(ser)?;
 		WithZeroNull::Ser(&self.end).write(ser)?;
