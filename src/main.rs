@@ -1,7 +1,7 @@
 use std::fs;
 
+use glacier_bin1::{deserialize, serialize};
 use hitman_behavior::{h1, h2, h3};
-use hitman_bin1::{deserialize, serialize};
 
 fn main() {
 	match std::env::args().nth(1).as_deref() {

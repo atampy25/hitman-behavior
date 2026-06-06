@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 ecow = "0.3.0"
-hitman-bin1 = { git = "https://github.com/atampy25/hitman-bin1", features = [
+glacier-bin1 = { git = "https://github.com/atampy25/glacier-bin1", features = [
     "h1",
     "h2",
     "h3",
@@ -23,5 +23,5 @@ codegen = "0.3.0"
 Inflector = "0.11.4"
 lazy-regex = "3.4.1"
 
-[profile.dev.package.hitman-bin1]
+[profile.dev.package.glacier-bin1]
 debug = false

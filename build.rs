@@ -156,13 +156,13 @@ fn parse_classes(classes: &str) -> Vec<(String, Vec<Member>)> {
 }
 
 fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code: &str, enums_code: &str) {
-	scope.import("hitman_bin1::ser", "Aligned");
-	scope.import("hitman_bin1::ser", "Bin1Serialize");
-	scope.import("hitman_bin1::ser", "Bin1Serializer");
-	scope.import("hitman_bin1::ser", "SerializeError");
-	scope.import("hitman_bin1::de", "Bin1Deserialize");
-	scope.import("hitman_bin1::de", "Bin1Deserializer");
-	scope.import("hitman_bin1::de", "DeserializeError");
+	scope.import("glacier_bin1::ser", "Aligned");
+	scope.import("glacier_bin1::ser", "Bin1Serialize");
+	scope.import("glacier_bin1::ser", "Bin1Serializer");
+	scope.import("glacier_bin1::ser", "SerializeError");
+	scope.import("glacier_bin1::de", "Bin1Deserialize");
+	scope.import("glacier_bin1::de", "Bin1Deserializer");
+	scope.import("glacier_bin1::de", "DeserializeError");
 
 	let mut classes = parse_classes(classes_code);
 	let enums = parse_enums(enums_code);
@@ -221,8 +221,8 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 						if let Some(pos) = classes.iter().position(|x| x.0 == *ty) {
 							class_queue.push_back(classes.remove(pos));
 						} else if ty.split('_').any(|x| x.starts_with('E')) {
-							scope.import(format!("hitman_bin1::game::{game}"), ty);
-							scope_nice.import(format!("hitman_bin1::game::{game}"), ty);
+							scope.import(format!("glacier_bin1::game::{game}"), ty);
+							scope_nice.import(format!("glacier_bin1::game::{game}"), ty);
 						}
 					}
 				}
@@ -244,7 +244,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			.derive("Bin1Deserialize")
 			.derive("serde::Serialize")
 			.derive("serde::Deserialize")
-			.r#macro("#[bin1(crate = hitman_bin1)]")
+			.r#macro("#[bin1(crate = glacier_bin1)]")
 			.vis("pub");
 
 		let cls_nice = scope_nice
@@ -501,7 +501,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			block
 		});
 
-	scope_nice.import(format!("hitman_bin1::game::{game}"), "ECompiledBehaviorType");
+	scope_nice.import(format!("glacier_bin1::game::{game}"), "ECompiledBehaviorType");
 
 	let behavior_nice = scope_nice
 		.new_enum("Behavior")
@@ -653,7 +653,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 			block
 		});
 
-	scope_nice.import(format!("hitman_bin1::game::{game}"), "ECompiledConditionType");
+	scope_nice.import(format!("glacier_bin1::game::{game}"), "ECompiledConditionType");
 
 	let condition_data_nice = scope_nice
 		.new_enum("ConditionData")

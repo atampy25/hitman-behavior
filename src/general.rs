@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use hitman_bin1::types::{array::TArrayRef, pointers::WithZeroNull};
+use glacier_bin1::types::{array::TArrayRef, pointers::WithZeroNull};
 use serde::{Deserialize, Serialize};
 use tryvial::try_fn;
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
-#[bin1(crate = hitman_bin1)]
+#[bin1(crate = glacier_bin1)]
 pub struct ZBehaviorTreeVariable {
 	#[serde(rename = "m_eType")]
 	pub r#type: EBehaviorTreeVariableType,
@@ -15,14 +15,14 @@ pub struct ZBehaviorTreeVariable {
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
-#[bin1(crate = hitman_bin1)]
+#[bin1(crate = glacier_bin1)]
 pub struct SBehaviorBase {
 	#[serde(rename = "eBehaviorType")]
 	pub behavior_type: ECompiledBehaviorType
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
-#[bin1(crate = hitman_bin1)]
+#[bin1(crate = glacier_bin1)]
 pub struct SConditionBase {
 	#[serde(rename = "eConditionType")]
 	pub condition_type: ECompiledConditionType,
@@ -143,7 +143,7 @@ fn deserialize_vec_arc_condition<'de, D: serde::Deserializer<'de>>(
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
-#[bin1(crate = hitman_bin1)]
+#[bin1(crate = glacier_bin1)]
 pub struct SConditionScope {
 	#[serde(
 		serialize_with = "serialize_option_arc_behavior",
@@ -168,7 +168,7 @@ pub struct SConditionScope {
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
-#[bin1(crate = hitman_bin1)]
+#[bin1(crate = glacier_bin1)]
 pub struct SBehaviorMatch {
 	#[serde(
 		serialize_with = "serialize_option_arc_behavior",
@@ -182,7 +182,7 @@ pub struct SBehaviorMatch {
 }
 
 #[derive(Debug, Clone, PartialEq, Bin1Serialize, Bin1Deserialize, Serialize, Deserialize)]
-#[bin1(crate = hitman_bin1)]
+#[bin1(crate = glacier_bin1)]
 pub struct SBehaviorSequence {
 	#[bin1(as = "TArrayRef::<Arc<SBehavior>>")]
 	#[serde(
