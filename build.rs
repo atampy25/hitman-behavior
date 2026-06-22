@@ -160,6 +160,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 	scope.import("glacier_bin1::ser", "Bin1Serialize");
 	scope.import("glacier_bin1::ser", "Bin1Serializer");
 	scope.import("glacier_bin1::ser", "SerializeError");
+	scope.import("glacier_bin1::de", "Bin1Sized");
 	scope.import("glacier_bin1::de", "Bin1Deserialize");
 	scope.import("glacier_bin1::de", "Bin1Deserializer");
 	scope.import("glacier_bin1::de", "DeserializeError");
@@ -436,6 +437,11 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 		.impl_trait("Aligned")
 		.associate_const("ALIGNMENT", "usize", "4", "");
 
+	scope
+		.new_impl("SBehavior")
+		.impl_trait("Bin1Sized")
+		.associate_const("SIZE", "usize", "0", "");
+
 	let ser_impl = scope.new_impl("SBehavior").impl_trait("Bin1Serialize");
 	ser_impl
 		.new_fn("alignment")
@@ -477,7 +483,6 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, classes_code:
 		});
 
 	let de_impl = scope.new_impl("SBehavior").impl_trait("Bin1Deserialize");
-	de_impl.associate_const("SIZE", "usize", "0", ""); // cannot use with bare Vec<T>
 	de_impl
 		.new_fn("read")
 		.arg("de", "&mut Bin1Deserializer")

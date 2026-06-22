@@ -69,9 +69,11 @@ impl Bin1Serialize for SCondition {
 	}
 }
 
-impl Bin1Deserialize for SCondition {
+impl Bin1Sized for SCondition {
 	const SIZE: usize = 0; // cannot use with bare Vec<T>
+}
 
+impl Bin1Deserialize for SCondition {
 	#[try_fn]
 	fn read(de: &mut Bin1Deserializer) -> Result<Self, DeserializeError> {
 		let base = SConditionBase::read(de)?;
@@ -232,10 +234,12 @@ impl Bin1Serialize for ZCompiledBehaviorTree {
 	}
 }
 
-impl Bin1Deserialize for ZCompiledBehaviorTree {
+impl Bin1Sized for ZCompiledBehaviorTree {
 	const SIZE: usize =
 		u32::SIZE + SConditionScope::SIZE + WithZeroNull::De::<SBehavior>::SIZE + TArrayRef::De::<EcoString>::SIZE;
+}
 
+impl Bin1Deserialize for ZCompiledBehaviorTree {
 	#[try_fn]
 	fn read(de: &mut Bin1Deserializer) -> Result<Self, DeserializeError> {
 		let _ = de.read_u32()?; // behavior type, always ConditionScope
