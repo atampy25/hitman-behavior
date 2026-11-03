@@ -33,20 +33,33 @@ impl Debug for ConditionScope {
 					if c.modifiers.weak { "WEAK " } else { "" },
 					if c.modifiers.abort { "ABORT " } else { "" },
 					if c.modifiers.not { "NOT " } else { "" },
-					format!("{:?}", c.data)
-						.split_once('(')
-						.unwrap()
-						.1
-						.split_once('_')
-						.unwrap()
-						.1
-						.chars()
-						.rev()
-						.skip(1)
-						.collect::<Vec<_>>()
-						.into_iter()
-						.rev()
-						.collect::<String>(),
+					{
+						let mut s = String::new();
+
+						let mut last = ' ';
+						for chr in format!("{:#?}", c.data)
+							.split_once('(')
+							.unwrap()
+							.1
+							.split_once('_')
+							.unwrap()
+							.1
+							.chars()
+							.filter(|&c| c != '\n')
+						{
+							if chr == ' ' && last == ' ' {
+								continue;
+							}
+							s.push(chr);
+							last = chr;
+						}
+
+						s.replace(", }", " }")
+							.replace(",)", ")")
+							.strip_suffix(')')
+							.unwrap()
+							.to_owned()
+					},
 					if c.assign_to == BehaviorTreeVariable::None {
 						"".into()
 					} else {
@@ -88,10 +101,11 @@ impl Debug for BehaviorNode {
 				}
 			}
 
-			BehaviorNode::Behavior(data) => write!(
-				f,
-				"BEHAVIOR {}",
-				format!("{data:?}")
+			BehaviorNode::Behavior(data) => write!(f, "BEHAVIOR {}", {
+				let mut s = String::new();
+
+				let mut last = ' ';
+				for chr in format!("{data:#?}")
 					.split_once('(')
 					.unwrap()
 					.1
@@ -99,13 +113,21 @@ impl Debug for BehaviorNode {
 					.unwrap()
 					.1
 					.chars()
-					.rev()
-					.skip(1)
-					.collect::<Vec<_>>()
-					.into_iter()
-					.rev()
-					.collect::<String>()
-			)?
+					.filter(|&c| c != '\n')
+				{
+					if chr == ' ' && last == ' ' {
+						continue;
+					}
+					s.push(chr);
+					last = chr;
+				}
+
+				s.replace(", }", " }")
+					.replace(",)", ")")
+					.strip_suffix(')')
+					.unwrap()
+					.to_owned()
+			})?
 		}
 	}
 }
