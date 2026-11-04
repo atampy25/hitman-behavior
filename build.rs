@@ -652,7 +652,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, types_json: &
 					"ECompiledBehaviorType::{ty} => Ok(Self::{ty}(SBehavior_{ty}::read(de)?)),"
 				));
 			}
-			block.line("_ => Err(DeserializeError::InvalidEnumValue(ty as i64))");
+			block.line("_ => Err(DeserializeError::InvalidEnumValue(ty.0 as i64))");
 			block
 		});
 
@@ -804,7 +804,7 @@ fn generate(scope: &mut Scope, scope_nice: &mut Scope, game: &str, types_json: &
 					"ECompiledConditionType::{ty} => Ok(Self::{ty}(SCondition_{ty}::read(de)?)),"
 				));
 			}
-			block.line("_ => Err(DeserializeError::InvalidEnumValue(ty as i64))");
+			block.line("_ => Err(DeserializeError::InvalidEnumValue(ty.0 as i64))");
 			block
 		});
 
